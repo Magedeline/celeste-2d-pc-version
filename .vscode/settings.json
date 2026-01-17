@@ -66,5 +66,7 @@
     "explorer.fileNesting.patterns": {
         "*.sln": "*.csproj"
     },
-    "dotnet.defaultSolution": "celeste-2d-pc-version.slnx"
+    "dotnet.defaultSolution": "celeste-2d-pc-version.slnx",
+    "dotnet.preferCSharpExtension": true,
+    "svn.ignoreMissingSvnWarning": true
 }

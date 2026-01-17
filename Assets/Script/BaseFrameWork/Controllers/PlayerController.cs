@@ -1,4 +1,4 @@
-﻿using Assets.Script.Player.States;
+using Assets.Script.Player.States;
 using Assets.Script.Player.VFX;
 using Assets.Script.SaveData;
 using NUnit.Framework;
@@ -26,7 +26,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float maxClimbTime = 1.2f;   // tClimb
     [SerializeField] float wallClimbCooldown = 0.5f; // t
     [SerializeField] float wallJumpForce = 2f;
-    [SerializeField] float wallClimbSpeed = 3f; // tốc độ leo tường khi giữ phím Z
+    [SerializeField] float wallClimbSpeed = 3f; // t?c d? leo tu?ng khi gi? ph�m Z
     [Header("Foot and Hand Object")]
     [SerializeField] Transform footPosition;
     [SerializeField] Transform handPosition;
@@ -47,11 +47,12 @@ public class PlayerController : MonoBehaviour
     public PlayerState nextState;
     int _Direction = 1;
     float currentSpeed = 5;
-    bool DashAble = true;
     //buffer and coyote
     float jumpbuffer = 0;
     float coyotetime = 0;
     float jumpcount = 0;
+    int maxDashes = 1;
+    int currentDashes = 1;
     
     public void SetPlayerData(PlayerData data)
     {
@@ -102,10 +103,6 @@ public class PlayerController : MonoBehaviour
         }
         SetState(new Idle(this));
         originalScale = transform.localScale;
-        if(originalScale == null)
-        {
-            Debug.LogError("Original Scale could not be determined.");
-        }
         landingEffect = GetComponent<LandingEffect>();
     }
 
@@ -179,7 +176,8 @@ public class PlayerController : MonoBehaviour
         
         if(IsOnTheGround())
         {
-           DashAble = true;
+           ResetDash();
+           maxDashes = 1; // Reset to single dash when grounded
         }
 
     }
@@ -289,7 +287,7 @@ public class PlayerController : MonoBehaviour
     public float WallJumpForce { get => wallJumpForce; }
     public float WallClimbSpeed { get => wallClimbSpeed; }
 
-    // Kiểm tra phím Z (leo tường) có đang được giữ không
+    // Ki?m tra ph�m Z (leo tu?ng) c� dang du?c gi? kh�ng
     public bool IsClimbKeyPressed()
     {
         return WallClimb.IsPressed();
@@ -306,7 +304,7 @@ public class PlayerController : MonoBehaviour
 
         if (inputX == 0) return false;
 
-        // đang nhấn về phía đang quay mặt
+        // dang nh?n v? ph�a dang quay m?t
         return Mathf.Sign(inputX) == Direction;
     }
 
@@ -359,16 +357,71 @@ public class PlayerController : MonoBehaviour
 
     public bool IsCanDash()
     {
-        return state.GetStateName() != "Dash"&&DashAble==true;
+        return state.GetStateName() != "Dash" && HasDash();
     }
 
     public void TurnOffDashAble()
     {
-        DashAble = false;
+        UseDash();
     }
 
     public float GetBaseGravityScale()
     {
         return BaseGravityScale;
     }
+
+    /// <summary>
+    /// Reset dash count to max dashes (called by springs, dash crystals, landing)
+    /// </summary>
+    public void ResetDash()
+    {
+        currentDashes = maxDashes;
+    }
+
+    /// <summary>
+    /// Set the maximum number of dashes (for double dash crystals)
+    /// </summary>
+    public void SetMaxDashes(int max)
+    {
+        maxDashes = max;
+        currentDashes = max;
+    }
+
+    /// <summary>
+    /// Get current available dashes
+    /// </summary>
+    public int GetCurrentDashes()
+    {
+        return currentDashes;
+    }
+
+    /// <summary>
+    /// Use one dash (returns true if dash was available)
+    /// </summary>
+    public bool UseDash()
+    {
+        if (currentDashes > 0)
+        {
+            currentDashes--;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Check if player has dashes available
+    /// </summary>
+    public bool HasDash()
+    {
+        return currentDashes > 0;
+    }
+
+    /// <summary>
+    /// Check if player is grounded (alias for IsOnTheGround)
+    /// </summary>
+    public bool GetIsGrounded()
+    {
+        return IsOnTheGround();
+    }
 }
+

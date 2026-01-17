@@ -1,0 +1,17 @@
+{
+    "name": "RoomSystem",
+    "rootNamespace": "",
+    "references": [
+        "GUID:831b458ef8919c24ea12fb444fc41310",
+        "GameCore"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

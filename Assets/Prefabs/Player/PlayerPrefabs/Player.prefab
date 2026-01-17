@@ -277,12 +277,20 @@ MonoBehaviour:
     m_Name: Wall Climb
     m_Type: 0
     m_ExpectedControlType: 
+<<<<<<< Updated upstream
     m_Id: 6be18eb3-d6f3-4d21-b12c-13dc11277e19
+=======
+    m_Id: 919faa71-1700-4718-8a35-110ff1bc63db
+>>>>>>> Stashed changes
     m_Processors: 
     m_Interactions: 
     m_SingletonActionBindings:
     - m_Name: 
+<<<<<<< Updated upstream
       m_Id: ad5c6a39-22f6-43d9-8524-a9197ef5b12e
+=======
+      m_Id: 24bf34da-95dc-471c-9749-a41b3b88aef1
+>>>>>>> Stashed changes
       m_Path: <Keyboard>/z
       m_Interactions: 
       m_Processors: 

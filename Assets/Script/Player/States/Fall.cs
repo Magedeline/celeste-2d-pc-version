@@ -10,7 +10,6 @@ namespace Player_State
         }
         public override void Enter()
         {
-            Debug.Log(playerController.GetComponent<Rigidbody2D>().linearVelocity);
             playerController.GetAnimator().Play("PlayerFall");
         }
         public override void Exit()

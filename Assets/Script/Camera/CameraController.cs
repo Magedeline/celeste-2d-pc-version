@@ -25,7 +25,8 @@ public class CameraController : MonoBehaviour
         Overhead,
         DistanceFollow,
         OffsetFollow,
-        BetweenTargetAndMouse
+        BetweenTargetAndMouse,
+        RoomBounds  // Celeste-style: camera stays within room bounds
     }
 
     [Header("CameraMovement")]
@@ -34,7 +35,8 @@ public class CameraController : MonoBehaviour
         "\tOverhead: Camera stays over that target\n" +
         "\tDistanceFollow: Camera stays within [Max distance From Target] away from the target.\n" +
         "\tOffsetFollow: Camera follows the target at an offset" +
-        "\tBetweenTargetAndMouse: Camera stays directly between the mouse position and the target position")]
+        "\tBetweenTargetAndMouse: Camera stays directly between the mouse position and the target position" +
+        "\tRoomBounds: Celeste-style camera that stays within room boundaries")]
     public CameraStyles cameraMovementStyle = CameraStyles.Locked;
 
     [Tooltip("The maximum distance away from the target that the camera can move")]
@@ -46,6 +48,22 @@ public class CameraController : MonoBehaviour
     [Tooltip("The percentage distance between the target position and the\n" +
         "mouse position to move the camera to in BetweenTargetAndMouse camera mode.")]
     public float mouseTracking = 0.5f;
+
+    [Header("Room Bounds Settings")]
+    [Tooltip("Current room bounds for RoomBounds camera mode")]
+    [SerializeField] private Rect currentRoomBounds = new Rect(0, 0, 320, 180);
+    [Tooltip("Smooth transition time when switching rooms")]
+    [SerializeField] private float roomTransitionTime = 0.3f;
+    [Tooltip("Enable smooth follow within room bounds")]
+    [SerializeField] private bool smoothFollowInRoom = true;
+    [Tooltip("Smooth follow speed")]
+    [SerializeField] private float smoothFollowSpeed = 8f;
+
+    // Room transition state
+    private bool isTransitioningRooms = false;
+    private Vector3 transitionStartPos;
+    private Vector3 transitionEndPos;
+    private float transitionTimer = 0f;
 
     [Header("Input Actions & Controls")]
     [Tooltip("The input action(s) that map to where the camera looks")]
@@ -107,7 +125,34 @@ public class CameraController : MonoBehaviour
         {
             target = GameManager.GetInstance().GetPlayerController().transform;
         }
+        
+        // Handle room transition animation
+        if (isTransitioningRooms)
+        {
+            UpdateRoomTransition();
+            return;
+        }
+        
         SetCameraPosition();
+    }
+
+    /// <summary>
+    /// Updates the camera position during room transitions
+    /// </summary>
+    private void UpdateRoomTransition()
+    {
+        transitionTimer += Time.deltaTime;
+        float t = Mathf.SmoothStep(0f, 1f, transitionTimer / roomTransitionTime);
+        
+        Vector3 newPos = Vector3.Lerp(transitionStartPos, transitionEndPos, t);
+        newPos.z = cameraZCoordinate;
+        transform.position = newPos;
+        
+        if (transitionTimer >= roomTransitionTime)
+        {
+            isTransitioningRooms = false;
+            transform.position = transitionEndPos;
+        }
     }
 
     /// <summary>
@@ -200,8 +245,113 @@ public class CameraController : MonoBehaviour
                 difference = Vector3.ClampMagnitude(difference, maxDistanceFromTarget);
                 result = targetPosition + difference;
                 break;
+            case CameraStyles.RoomBounds:
+                result = ComputeRoomBoundsPosition(targetPosition);
+                break;
         }
         result.z = cameraZCoordinate;
         return result;
+    }
+
+    /// <summary>
+    /// Computes camera position for RoomBounds mode
+    /// Camera follows target but stays clamped within room boundaries
+    /// </summary>
+    private Vector3 ComputeRoomBoundsPosition(Vector3 targetPosition)
+    {
+        if (playerCamera == null) return targetPosition;
+
+        // Get camera viewport size in world units
+        float cameraHeight = playerCamera.orthographicSize * 2f;
+        float cameraWidth = cameraHeight * playerCamera.aspect;
+
+        // Calculate the allowed camera position range within the room
+        float minX = currentRoomBounds.xMin + cameraWidth / 2f;
+        float maxX = currentRoomBounds.xMax - cameraWidth / 2f;
+        float minY = currentRoomBounds.yMin + cameraHeight / 2f;
+        float maxY = currentRoomBounds.yMax - cameraHeight / 2f;
+
+        // Handle rooms smaller than camera view
+        if (minX > maxX)
+        {
+            minX = maxX = currentRoomBounds.center.x;
+        }
+        if (minY > maxY)
+        {
+            minY = maxY = currentRoomBounds.center.y;
+        }
+
+        // Target position is where we want the camera to be (following player)
+        Vector3 desiredPos = targetPosition;
+
+        // Clamp to room bounds
+        desiredPos.x = Mathf.Clamp(desiredPos.x, minX, maxX);
+        desiredPos.y = Mathf.Clamp(desiredPos.y, minY, maxY);
+
+        // Smooth follow or instant
+        if (smoothFollowInRoom)
+        {
+            return Vector3.Lerp(transform.position, desiredPos, smoothFollowSpeed * Time.deltaTime);
+        }
+        
+        return desiredPos;
+    }
+
+    /// <summary>
+    /// Set the current room bounds for RoomBounds camera mode
+    /// </summary>
+    public void SetRoomBounds(Rect bounds, bool smoothTransition = true)
+    {
+        Rect previousBounds = currentRoomBounds;
+        currentRoomBounds = bounds;
+
+        if (smoothTransition && cameraMovementStyle == CameraStyles.RoomBounds)
+        {
+            // Start smooth transition to new room
+            StartRoomTransition();
+        }
+    }
+
+    /// <summary>
+    /// Start a smooth camera transition to the new room
+    /// </summary>
+    private void StartRoomTransition()
+    {
+        transitionStartPos = transform.position;
+        
+        // Calculate target position in new room
+        Vector3 targetPos = target != null ? target.position : currentRoomBounds.center;
+        transitionEndPos = ComputeRoomBoundsPosition(targetPos);
+        transitionEndPos.z = cameraZCoordinate;
+        
+        transitionTimer = 0f;
+        isTransitioningRooms = true;
+    }
+
+    /// <summary>
+    /// Instantly snap camera to room center (no transition)
+    /// </summary>
+    public void SnapToRoomCenter()
+    {
+        Vector3 newPos = currentRoomBounds.center;
+        newPos.z = cameraZCoordinate;
+        transform.position = newPos;
+        isTransitioningRooms = false;
+    }
+
+    /// <summary>
+    /// Get current room bounds
+    /// </summary>
+    public Rect GetRoomBounds()
+    {
+        return currentRoomBounds;
+    }
+
+    /// <summary>
+    /// Check if camera is currently transitioning between rooms
+    /// </summary>
+    public bool IsTransitioning()
+    {
+        return isTransitioningRooms;
     }
 }

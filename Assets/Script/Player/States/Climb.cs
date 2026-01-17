@@ -10,7 +10,6 @@ namespace Assets.Script.Player.States
 {
     internal class Climb : PlayerState
     {
-        private float originalGravityScale;
         float climbTimer;
         public Climb(PlayerController playerController) : base(playerController)
         {
